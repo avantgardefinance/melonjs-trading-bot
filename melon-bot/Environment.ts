@@ -1,14 +1,29 @@
+import LRUCache from 'lru-cache';
+import { Environment } from '@melonproject/melonjs';
 import { Eth } from 'web3-eth';
-import { HttpProvider } from 'web3-providers';
-import { DeployedEnvironment, DeploymentOutput } from '@melonproject/melonjs';
+import { HttpProvider, WebsocketProvider, HttpProviderOptions, WebsocketProviderOptions } from 'web3-providers';
 
-const fs = require('fs')
+export function createEnvironment(eth: Eth) {
+  return new Environment(eth, {
+    cache: new LRUCache(500),
+  });
+}
 
-// Instantiate the environment where you'll create your fund
-const eth = new Eth(
-  new HttpProvider('https://mainnet.infura.io/v3/9136e09ace01493b86fed528cb6a87a5', { confirmTransactionBlocks: 1 })
-);
-// Read the deployment from the deployment JSON
-const deployment: DeploymentOutput = fs.readFileSync('./deployments/mainnnet-deployment.json');
+export function createProvider(endpoint: string, options?: HttpProviderOptions | WebsocketProviderOptions) {
+  if (endpoint.startsWith('https://') || endpoint.startsWith('http://')) {
+    return new HttpProvider(endpoint, options as HttpProviderOptions);
+  }
 
-export const environment = new DeployedEnvironment(eth, deployment);
+  if (endpoint.startsWith('wss://') || endpoint.startsWith('ws://')) {
+    return new WebsocketProvider(endpoint, options as WebsocketProviderOptions);
+  }
+
+  throw new Error('Invalid endpoint protocol.');
+}
+
+export function disconnectProvider(env: Environment) {
+  const provider = env.client && (env.client.currentProvider as any);
+  if (provider && provider.connection && typeof provider.connection.close === 'function') {
+    provider.connection.close();
+  }
+}
