@@ -1,5 +1,4 @@
 import {
-  ExchangeIdentifier,
   Accounting,
   Hub,
   Trading,
@@ -11,14 +10,6 @@ import {
   FundHolding,
 } from '@melonproject/melonjs';
 import BigNumber from 'bignumber.js';
-
-// instantiate environment
-// instantiate hub
-// instantiate trading
-// get token addresses for WETH and DAI
-// get WETH and DAI balances
-// find wethdai exchange address
-// instantiate UniswapExchange with wethdai exchange
 
 interface PriceQueryResult {
   baseCurrency: TokenDefinition;
@@ -55,22 +46,39 @@ export class UniswapBot {
     this.tokenTwo = this.environment.getToken(tokenTwo);
   }
 
-  async magicFunction(balances, prices) {
-    return Boolean; // (trade or not)
+  async magicFunction(balances: FundHolding[]) {
+    const random = Math.random()
+    const [tokenOneBalance] = balances.filter(token => token.address === this.tokenOne.address)
+    const [tokenTwoBalance] = balances.filter(token => token.address === this.tokenTwo.address)
+    if (random > .50 && tokenOneBalance.amount.isGreaterThan(0)){
+
+    }
+    if (random > .50 && tokenTwoBalance.amount.isGreaterThan(0)){
+
+    }
+    if (random <= .50 && tokenOneBalance.amount.isGreaterThan(0)){
+
+    }
+    if (random <= .50 && tokenTwoBalance.amount.isGreaterThan(0)){
+
+    }
   }
 
   public async getBalances() {
     // find the fund's accounting address
     const accountingAddress = (await this.hub.getRoutes()).accounting;
+
     // and instantiate a js representation of the contract
     const accounting = new Accounting(this.environment, accountingAddress);
+
     // to call the getFundHoldings method
     const fundHoldings = await accounting.getFundHoldings();
+    
     // which returns an array of hodlings.
-    return fundHoldings;
+    return fundHoldings as FundHolding[];
   }
 
-  private async getPrice(baseCurrency: TokenDefinition, quoteCurrency: TokenDefinition, amount: BigNumber) {
+  public async getPrice(baseCurrency: TokenDefinition, quoteCurrency: TokenDefinition, amount: BigNumber) {
     // Every uniswap exchange is WETH/someToken, and identified by the non-weth token
     const exchangeToken = baseCurrency.symbol === 'WETH' ? quoteCurrency : baseCurrency;
 
@@ -111,6 +119,7 @@ export class UniswapBot {
       makerAsset: priceInfo.baseCurrency.address,
       takerAsset: priceInfo.quoteCurrency.address,
     };
+
     // find the fund's trading address
     const tradingAddress = (await this.hub.getRoutes()).trading;
 
@@ -150,10 +159,3 @@ export class UniswapBot {
 // store a json wallet and a password much like pricefeed updater
 // kubernetes encrypted storage
 // prompted for private keys upon running script
-/**
- * check fund balances. either long eth or long mln.
- * check rate based on whether you're long eth or long mln
- * rate either satisfies condition or it doesn't
- * if it does, and if you're long eth, sell eth for mln. if you're long mln, sell mln for eth.
- *
- */
