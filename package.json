@@ -2,7 +2,7 @@
   "private": true,
   "license": "MIT",
   "author": "Avantgarde Finance <team@avantgarde.finance>",
-  "homepage": "https://melonprotocol.com",
+  "homepage": "https://avantgarde.finance",
   "contributors": ["Erin Koen <erin.koen@gmail.com>"],
   "scripts": {
     "dev": "cross-env NODE_ENV=development ts-node --require dotenv-extended/config --transpile-only src"
