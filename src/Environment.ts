@@ -1,12 +1,18 @@
-import LRUCache from 'lru-cache';
-import { Environment } from '@melonproject/melonjs';
+import { DeployedEnvironment } from '@melonproject/melonjs';
 import { Eth } from 'web3-eth';
 import { HttpProvider, WebsocketProvider, HttpProviderOptions, WebsocketProviderOptions } from 'web3-providers';
+import deployment from './deployments/mainnet-deployment.json';
 
-export function createEnvironment(eth: Eth) {
-  return new Environment(eth, {
-    cache: new LRUCache(500),
+export function createEnvironment() {
+  const provider = createProvider(process.env.PROVIDER_ENDPOINT);
+  const client = new Eth(provider, undefined, {
+    transactionConfirmationBlocks: 1,
   });
+
+  const wallet = client.accounts.privateKeyToAccount(process.env.ETH_PRIVATE_KEY);
+  client.accounts.wallet.add(wallet);
+
+  return new DeployedEnvironment(client, 1, deployment as any);
 }
 
 export function createProvider(endpoint: string, options?: HttpProviderOptions | WebsocketProviderOptions) {
@@ -19,11 +25,4 @@ export function createProvider(endpoint: string, options?: HttpProviderOptions |
   }
 
   throw new Error('Invalid endpoint protocol.');
-}
-
-export function disconnectProvider(env: Environment) {
-  const provider = env.client && (env.client.currentProvider as any);
-  if (provider && provider.connection && typeof provider.connection.close === 'function') {
-    provider.connection.close();
-  }
 }
