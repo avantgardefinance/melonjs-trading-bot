@@ -30,7 +30,6 @@ export class UniswapBot {
   managerAddress: string;
   hubAddress: string;
   environment: DeployedEnvironment;
-  gasPrice: number;
   hub: Hub;
   tokenOne: TokenDefinition;
   tokenTwo: TokenDefinition;
@@ -211,15 +210,15 @@ export class UniswapBot {
 
     // instantiate the transactionOptions object
     const options: SendOptions = { gasPrice: gasPrice, gas: 1000000 };
+
+    // send the transaction using the options object
     try {
       const opts = await transaction.prepare(options);
-
       const receipt = await transaction.send(opts);
-      // call the imported util method to execute the trade
       return receipt as TransactionReceipt;
     } catch (error) {
       console.log(`An error occurred while trading: ${error}`);
     }
-    return      
+    return;
   }
 }
