@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import {
   Accounting,
   Hub,
@@ -7,14 +8,9 @@ import {
   UniswapFactory,
   DeployedEnvironment,
   TokenDefinition,
-  FundHolding,
-  SendOptions,
+  sameAddress,
 } from '@melonproject/melonjs';
-import { TransactionReceipt } from 'web3-core';
-import BigNumber from 'bignumber.js';
-import { fromTokenBaseUnit } from './utils/fromTokenBaseUnit';
-import { toTokenBaseUnit } from './utils/toTokenBaseUnit';
-import { getGasPrice } from './utils/getGasPrice';
+import { createEnvironment } from './utils/createEnvironment';
 
 interface PriceQueryResult {
   baseCurrency: TokenDefinition;
@@ -27,58 +23,62 @@ interface PriceQueryResult {
 }
 
 export class UniswapBot {
-  managerAddress: string;
-  hubAddress: string;
-  environment: DeployedEnvironment;
-  hub: Hub;
-  tokenOne: TokenDefinition;
-  tokenTwo: TokenDefinition;
+  public static async create(hubAddress: string, tokenOneSymbol: string, tokenTwoSymbol: string) {
+    const environment = createEnvironment();
+    const hub = new Hub(environment, hubAddress);
+    const routes = await hub.getRoutes();
+    const manager = await hub.getManager();
+    const account = (await environment.client.getAccounts())[0];
 
-  constructor(
-    managerAddress: string,
-    hubAddress: string,
-    environment: DeployedEnvironment,
-    tokenOne: string,
-    tokenTwo: string
-  ) {
-    this.managerAddress = managerAddress;
-    this.hubAddress = hubAddress;
-    this.environment = environment;
-    this.hub = new Hub(this.environment, this.hubAddress);
-    this.tokenOne = this.environment.getToken(tokenOne);
-    this.tokenTwo = this.environment.getToken(tokenTwo);
+    if (!sameAddress(manager, account)) {
+      throw new Error('You are not the manager of this fund.');
+    }
+
+    const trading = new Trading(environment, routes.trading);
+    const accounting = new Accounting(environment, routes.accounting);
+
+    const adapterAddress = environment.deployment.melon.addr.UniswapAdapter;
+    const adapter = await UniswapTradingAdapter.create(environment, adapterAddress, trading);
+
+    const factoryAddress = environment.deployment.uniswap.addr.UniswapFactory;
+    const factory = new UniswapFactory(environment, factoryAddress);
+
+    const tokenOne = environment.getToken(tokenOneSymbol);
+    const tokenTwo = environment.getToken(tokenTwoSymbol);
+
+    return new this(environment, account, hub, trading, accounting, adapter, factory, tokenOne, tokenTwo);
   }
 
-  public async magicFunction() {
-    // get your fund's current balances
-    const balances = await this.getBalances();
+  constructor(
+    public readonly environment: DeployedEnvironment,
+    public readonly account: string,
+    public readonly hubContract: Hub,
+    public readonly tradingContract: Trading,
+    public readonly accountingContract: Accounting,
+    public readonly uniswapAdapterContract: UniswapTradingAdapter,
+    public readonly uniswapFactoryContract: UniswapFactory,
+    public readonly tokenOne: TokenDefinition,
+    public readonly tokenTwo: TokenDefinition
+  ) {}
+
+  public fortuneTeller(expectedPrice: PriceQueryResult) {
+    // this is my sophisticated trading strategy you could build
+    // something more elaborate yourself.
+    return Math.random() > 0.5;
+  }
+
+  public async makeMeRich() {
+    // call the getFundHoldings method which returns an array of hodlings.
+    const balances = await this.accountingContract.getFundHoldings();
     // if you have a zero balance, the getBalances method will return only 1/2 objects that you care about
     // if you have a balance in both, the map function has logic to suss out the one with lower holdings
 
-    // filter the holdings array to show only the tokens your bot cares about and add a couple of bits you'll need
-    const botHoldings = balances
-      .filter((holding) => {
-        return (
-          holding.address.toLowerCase() === this.tokenOne.address ||
-          holding.address.toLowerCase() === this.tokenTwo.address
-        );
-      })
-      .map((holding) => {
-        // find the Token, which holds address/symbol etc. Things we'll need later.
-        const token = holding.address.toLowerCase() === this.tokenOne.address ? this.tokenOne : this.tokenTwo;
+    // filter the holdings array to get only the tokens your bot cares about
+    const tokenOneHolding =
+      balances.find((balance) => sameAddress(balance.address, this.tokenOne.address))?.amount || new BigNumber(0);
 
-        // standardize the amounts displayed
-        const amount =
-          holding.address === this.tokenOne.address
-            ? toTokenBaseUnit(holding.amount, this.tokenOne.decimals)
-            : toTokenBaseUnit(holding.amount, this.tokenTwo.decimals);
-
-        // return an object with all the info you'll need. (quoteCurrency in this case is specific to my trading strategy)
-        return {
-          token: token,
-          amount: amount,
-        };
-      });
+    const tokenTwoHolding =
+      balances.find((balance) => sameAddress(balance.address, this.tokenTwo.address))?.amount || new BigNumber(0);
 
     /**
      * Specific to my strategy, where we are either long MLN or long ETH but never long both,
@@ -87,93 +87,52 @@ export class UniswapBot {
      * with balances that it has not traded. In that case, I've set MLN to be
      * the base ccy (bot will sell MLN balance buy WETH)
      */
-    const baseCurrency = botHoldings.reduce((prev, curr) => {
-      if (curr.amount.isGreaterThan(prev.amount)) {
-        return curr;
-      } else {
-        return prev;
-      }
-    }, botHoldings[0]).token;
-
-    // token amounts come back from the accounting contract in WEI
-    const baseQuantity = botHoldings.reduce((prev, curr) => {
-      if (curr.token === baseCurrency) {
-        return fromTokenBaseUnit(curr.amount, curr.token.decimals);
-      } else {
-        return prev;
-      }
-    }, new BigNumber(0));
-
-    // the non-quote currency
+    const baseCurrency = tokenOneHolding.isGreaterThan(tokenTwoHolding) ? this.tokenOne : this.tokenTwo;
     const quoteCurrency = baseCurrency === this.tokenOne ? this.tokenTwo : this.tokenOne;
+    const baseQuantity = baseCurrency === this.tokenOne ? tokenOneHolding : tokenTwoHolding;
 
     // pass them all to the getPrice function to see what the rates are
     const priceObject = await this.getPrice(baseCurrency, quoteCurrency, baseQuantity);
 
-    const random = Math.random();
-
-    if (random > 0.5) {
-      console.log('THE ORACLE SAYS TO TRADE');
-      return priceObject && this.trade(priceObject);
-    } else {
-      console.log('NO TRADING BY ORDER OF THE ORACLE');
-      return;
+    if (this.fortuneTeller(priceObject)) {
+      return this.makeTransaction(priceObject);
     }
+
+    return null;
   }
 
-  public async getBalances() {
-    // find the fund's accounting address
-    const accountingAddress = (await this.hub.getRoutes()).accounting;
-
-    // and instantiate a js representation of the contract
-    const accounting = new Accounting(this.environment, accountingAddress);
-
-    // to call the getFundHoldings method
-    const fundHoldings = await accounting.getFundHoldings();
-
-    // which returns an array of hodlings.
-    return fundHoldings as FundHolding[];
-  }
-
-  public async getPrice(baseCurrency: TokenDefinition, quoteCurrency: TokenDefinition, amount: BigNumber) {
+  public async getPrice(baseCurrency: TokenDefinition, quoteCurrency: TokenDefinition, baseQuantity: BigNumber) {
     // Every uniswap exchange is WETH/someToken, and identified by the non-weth token
     const exchangeToken = baseCurrency.symbol === 'WETH' ? quoteCurrency : baseCurrency;
-    try {
-      // instantiate an exchange factory to find the correct address
-      const factory = new UniswapFactory(this.environment, this.environment.deployment.uniswap.addr.UniswapFactory);
 
-      // call the method to find the address
-      const exchangeAddress = await factory.getExchange(exchangeToken.address);
+    // call the method to find the address
+    const exchangeAddress = await this.uniswapFactoryContract.getExchange(exchangeToken.address);
 
-      // instantiate the exchange contract
-      const exchange = new UniswapExchange(this.environment, exchangeAddress);
+    // instantiate the exchange contract
+    const exchange = new UniswapExchange(this.environment, exchangeAddress);
 
-      // call the correct method to get the price. If the base currency is WETH, you want to go ETH => token and vice versa
-      const quoteQuantity =
-        baseCurrency.symbol === 'WETH'
-          ? await exchange.getEthToTokenInputPrice(amount) // quantity passed is in WETH if you're trying to sell WETH for MLN
-          : await exchange.getTokenToEthInputPrice(amount); // quantity passed is in MLN if you're trying to sell MLN for WETH
+    // call the correct method to get the price. If the base currency is WETH, you want to go ETH => token and vice versa
+    const quoteQuantity =
+      baseCurrency.symbol === 'WETH'
+        ? await exchange.getEthToTokenInputPrice(baseQuantity) // quantity passed is in WETH if you're trying to sell WETH for MLN
+        : await exchange.getTokenToEthInputPrice(baseQuantity); // quantity passed is in MLN if you're trying to sell MLN for WETH
 
-      // price will be important if you're doing any TA. My magicFunction doesn't use it but I've included it anyway.
-      const priceInBase = quoteQuantity.dividedBy(amount);
-      const priceInQuote = new BigNumber(1).dividedBy(priceInBase);
+    // price will be important if you're doing any TA. My magicFunction doesn't use it but I've included it anyway.
+    const priceInBase = quoteQuantity.dividedBy(baseQuantity);
+    const priceInQuote = new BigNumber(1).dividedBy(priceInBase);
 
-      return {
-        baseCurrency: baseCurrency,
-        quoteCurrency: quoteCurrency,
-        priceInBase: priceInBase,
-        priceInQuote: priceInQuote,
-        sizeInBase: amount,
-        sizeInQuote: quoteQuantity,
-        exchangeAddress: exchangeAddress,
-      } as PriceQueryResult;
-    } catch (error) {
-      console.log(`An error occurred while fetching prices: ${error}`);
-    }
-    return;
+    return {
+      baseCurrency: baseCurrency,
+      quoteCurrency: quoteCurrency,
+      priceInBase: priceInBase,
+      priceInQuote: priceInQuote,
+      sizeInBase: baseQuantity,
+      sizeInQuote: quoteQuantity,
+      exchangeAddress: exchangeAddress,
+    } as PriceQueryResult;
   }
 
-  public async trade(priceInfo: PriceQueryResult) {
+  public async makeTransaction(priceInfo: PriceQueryResult) {
     // adjust the target amount of token to buy
     const slippage = 0.97;
 
@@ -189,36 +148,7 @@ export class UniswapBot {
       `Buying ${orderArgs.makerQuantity} ${priceInfo.quoteCurrency.symbol} by selling ${orderArgs.takerQuantity} ${priceInfo.baseCurrency.symbol}`
     );
 
-    // find the fund's trading address
-    const tradingAddress = (await this.hub.getRoutes()).trading;
-
-    // and use it to instantiate the contract
-    const trading = new Trading(this.environment, tradingAddress);
-
-    // create the uniswap trading adapter
-    const adapter = await UniswapTradingAdapter.create(
-      this.environment,
-      this.environment.deployment.melon.addr.UniswapAdapter,
-      trading
-    );
-
     // instantiate the transaction object
-    const transaction = adapter.takeOrder(this.managerAddress, orderArgs);
-
-    // query ethgasstation to figure out how much this'll cost
-    const gasPrice = await getGasPrice(2);
-
-    // instantiate the transactionOptions object
-    const options: SendOptions = { gasPrice: gasPrice, gas: 1000000 };
-
-    // send the transaction using the options object
-    try {
-      const opts = await transaction.prepare(options);
-      const receipt = await transaction.send(opts);
-      return receipt as TransactionReceipt;
-    } catch (error) {
-      console.log(`An error occurred while trading: ${error}`);
-    }
-    return;
+    return this.uniswapAdapterContract.takeOrder(this.account, orderArgs);
   }
 }

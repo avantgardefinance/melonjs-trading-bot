@@ -1,9 +1,9 @@
 import { DeployedEnvironment } from '@melonproject/melonjs';
 import { Eth } from 'web3-eth';
 import { HttpProvider, WebsocketProvider, HttpProviderOptions, WebsocketProviderOptions } from 'web3-providers';
-import deployment from './deployments/mainnet-deployment.json';
+import deployment from '../deployments/mainnet-deployment.json';
 
-export function createProvider(endpoint: string, options?: HttpProviderOptions | WebsocketProviderOptions) {
+function createProvider(endpoint: string, options?: HttpProviderOptions | WebsocketProviderOptions) {
   if (endpoint.startsWith('https://') || endpoint.startsWith('http://')) {
     return new HttpProvider(endpoint, options as HttpProviderOptions);
   }
@@ -26,4 +26,3 @@ export function createEnvironment() {
 
   return new DeployedEnvironment(client, 1, deployment as any);
 }
-
