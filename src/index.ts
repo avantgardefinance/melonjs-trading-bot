@@ -18,7 +18,7 @@ async function recursiveTradeCaller() {
   console.log('Going to sleep.')
   setTimeout(() => {
     recursiveTradeCaller();
-  }, 1000 * 60 * 5);
+  }, 1000 * 60 * 15);
 }
 
 recursiveTradeCaller();

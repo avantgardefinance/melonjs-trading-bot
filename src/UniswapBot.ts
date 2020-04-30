@@ -50,7 +50,7 @@ export class UniswapBot {
     this.tokenTwo = this.environment.getToken(tokenTwo);
   }
 
-  async magicFunction() {
+  public async magicFunction() {
     // get your fund's current balances
     const balances = await this.getBalances();
     // if you have a zero balance, the getBalances method will return only 1/2 objects that you care about
@@ -78,7 +78,6 @@ export class UniswapBot {
         return {
           token: token,
           amount: amount,
-          baseCurrency: amount.isGreaterThan(0.1), //
         };
       });
 
@@ -90,12 +89,12 @@ export class UniswapBot {
      * the base ccy (bot will sell MLN balance buy WETH)
      */
     const baseCurrency = botHoldings.reduce((prev, curr) => {
-      if (curr.baseCurrency) {
-        return curr.token;
+      if (curr.amount.isGreaterThan(prev.amount)) {
+        return curr;
       } else {
         return prev;
       }
-    }, this.tokenTwo);
+    }, botHoldings[0]).token;
 
     // token amounts come back from the accounting contract in WEI
     const baseQuantity = botHoldings.reduce((prev, curr) => {
@@ -116,7 +115,7 @@ export class UniswapBot {
 
     if (random > 0.5) {
       console.log('THE ORACLE SAYS TO TRADE');
-      return this.trade(priceObject);
+      return priceObject && this.trade(priceObject);
     } else {
       console.log('NO TRADING BY ORDER OF THE ORACLE');
       return;
@@ -170,9 +169,9 @@ export class UniswapBot {
         exchangeAddress: exchangeAddress,
       } as PriceQueryResult;
     } catch (error) {
-      console.log(error);
-      return `An error occurred while fetching prices: ${error}`
+      console.log(`An error occurred while fetching prices: ${error}`);
     }
+    return;
   }
 
   public async trade(priceInfo: PriceQueryResult) {
@@ -219,8 +218,8 @@ export class UniswapBot {
       // call the imported util method to execute the trade
       return receipt as TransactionReceipt;
     } catch (error) {
-      console.log(error);
-      `An error occurred while trading: ${error}`
+      console.log(`An error occurred while trading: ${error}`);
     }
+    return      
   }
 }
