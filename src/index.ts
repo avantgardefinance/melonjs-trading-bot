@@ -12,21 +12,22 @@ async function run(bot: UniswapBot) {
     } else {
       console.log('THE ORACLE SAYS TO TRADE');
       console.log('VALIDATING TRANSACTION');
-      await transaction.validate();
 
-      // query ethgasstation to figure out how much this'll cost
-      console.log('FETCHING CURRENT GAS PRICE');
-      const gasPrice = await getGasPrice(2);
+      const receipt = await new Promise<TransactionReceipt>(async (resolve, reject) => {
+        await transaction.validate();
 
-      // instantiate the transactionOptions object
-      console.log('ESTIMATION TRANSACTION GAS COST');
-      const opts = await transaction.prepare({ gasPrice });
+        // query ethgasstation to figure out how much this'll cost
+        console.log('FETCHING CURRENT GAS PRICE');
+        const gasPrice = await getGasPrice(2);
 
-      // send the transaction using the options object
-      console.log('SENDING TRANSACTION');
-      const tx = transaction.send(opts);
+        // instantiate the transactionOptions object
+        console.log('ESTIMATION TRANSACTION GAS COST');
+        const opts = await transaction.prepare({ gasPrice });
 
-      const receipt = await new Promise<TransactionReceipt>((resolve, reject) => {
+        // send the transaction using the options object
+        console.log('SENDING TRANSACTION');
+        const tx = transaction.send(opts);
+
         tx.once('transactionHash', (hash) => console.log(`PENDING TRANSACTION: https://etherscan.io/tx/${hash}`));
         tx.once('receipt', (receipt) => resolve(receipt));
         tx.once('error', (error) => reject(error));
