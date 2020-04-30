@@ -13,7 +13,6 @@
     "@melonproject/melonjs": "^1.0.1",
     "axios": "^0.19.2",
     "bignumber.js": "^9.0.0",
-    "cron": "^1.8.2",
     "web3-core": "^2.0.0-alpha.1",
     "web3-eth": "^2.0.0-alpha.1",
     "web3-providers": "^2.0.0-alpha.1",

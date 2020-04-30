@@ -9,7 +9,9 @@ import {
   DeployedEnvironment,
   TokenDefinition,
   sameAddress,
+
 } from '@melonproject/melonjs';
+
 import { createEnvironment } from './utils/createEnvironment';
 
 interface PriceQueryResult {
@@ -21,6 +23,8 @@ interface PriceQueryResult {
   sizeInQuote: BigNumber;
   exchangeAddress: string;
 }
+
+
 
 export class UniswapBot {
   public static async create(hubAddress: string, tokenOneSymbol: string, tokenTwoSymbol: string) {
@@ -132,7 +136,7 @@ export class UniswapBot {
     } as PriceQueryResult;
   }
 
-  public async makeTransaction(priceInfo: PriceQueryResult) {
+  public async makeTransaction(priceInfo: PriceQueryResult){
     // adjust the target amount of token to buy
     const slippage = 0.97;
 
