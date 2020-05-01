@@ -1,10 +1,28 @@
 {
+  "private": true,
+  "license": "MIT",
+  "author": "Avantgarde Finance <team@avantgarde.finance>",
+  "homepage": "https://avantgarde.finance",
+  "contributors": [
+    "Erin Koen <erin.koen@gmail.com>"
+  ],
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development ts-node --require dotenv-extended/config --transpile-only src"
+  },
   "dependencies": {
     "@melonproject/melonjs": "^1.0.1",
-    "web3-eth": "^1.2.6",
-    "web3-providers": "^1.0.0-beta.55"
+    "axios": "^0.19.2",
+    "bignumber.js": "^9.0.0",
+    "web3-core": "^2.0.0-alpha.1",
+    "web3-eth": "^2.0.0-alpha.1",
+    "web3-providers": "^2.0.0-alpha.1",
+    "web3-utils": "^2.0.0-alpha.1"
   },
   "devDependencies": {
+    "@types/node": "^13.13.4",
+    "cross-env": "^7.0.2",
+    "dotenv-extended": "^2.8.0",
+    "ts-node": "^8.9.0",
     "typescript": "^3.8.3"
   }
 }
