@@ -89,8 +89,8 @@ export class UniswapBot {
      * Specific to my strategy, where we are either long MLN or long ETH but never long both,
      * baseCurrency is the currency with holdings, quote currency is the currency without.
      * It will be the case that they're both non-zero only if the bot starts running
-     * with balances that it has not traded. In that case, I've set MLN to be
-     * the base ccy (bot will sell MLN balance buy WETH)
+     * with balances that it has not traded. In that case, I've set the token with the larger
+     * holding to be the base.
      */
     const baseCurrency = tokenOneHolding.isGreaterThan(tokenTwoHolding) ? this.tokenOne : this.tokenTwo;
     const quoteCurrency = baseCurrency === this.tokenOne ? this.tokenTwo : this.tokenOne;
