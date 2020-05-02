@@ -43,7 +43,7 @@ async function run(bot: UniswapBot) {
     console.log('SCHEDULING NEXT ITERATION');
     setTimeout(() => {
       run(bot);
-    }, 1000 * 60 * 15);
+    }, 1000 * 60 * 1);
   }
 }
 

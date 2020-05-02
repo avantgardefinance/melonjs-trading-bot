@@ -68,7 +68,8 @@ export class UniswapBot {
   public fortuneTeller(expectedPrice: PriceQueryResult) {
     // this is my sophisticated trading strategy you could build
     // something more elaborate yourself.
-    return Math.random() > 0.5;
+    // return Math.random() > 0.5;
+    return true
   }
 
   public async makeMeRich() {
