@@ -53,7 +53,7 @@ export class UniswapBot {
     return new this(environment, account, hub, trading, accounting, adapter, factory, tokenOne, tokenTwo);
   }
 
-  constructor(
+  private constructor(
     public readonly environment: DeployedEnvironment,
     public readonly account: string,
     public readonly hubContract: Hub,
@@ -73,12 +73,10 @@ export class UniswapBot {
   }
 
   public async makeMeRich() {
-    // call the getFundHoldings method which returns an array of hodlings.
+    // call the getFundHoldings method which returns an array of holdings.
     const balances = await this.accountingContract.getFundHoldings();
-    // if you have a zero balance, the getBalances method will return only 1/2 objects that you care about
-    // if you have a balance in both, the map function has logic to suss out the one with lower holdings
 
-    // filter the holdings array to get only the tokens your bot cares about
+    // deduce holdings in each token your bot cares about
     const tokenOneHolding =
       balances.find((balance) => sameAddress(balance.address, this.tokenOne.address))?.amount || new BigNumber(0);
 
