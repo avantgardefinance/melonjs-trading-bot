@@ -1,5 +1,4 @@
 # melonjs-trading-bot
-A simple trading bot built with MelonJS
 
 A companion repo for [How To Build a Melon Bot](https://medium.com/melonprotocol/building-a-melonbot-1cdea583fb88).
 
