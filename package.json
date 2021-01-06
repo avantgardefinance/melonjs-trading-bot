@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@melonproject/melonjs": "^1.0.1",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bignumber.js": "^9.0.0",
     "web3-core": "^2.0.0-alpha.1",
     "web3-eth": "^2.0.0-alpha.1",
